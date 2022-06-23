@@ -30,45 +30,42 @@ function pokemonInfoReducer(state, action) {
     }
   }
 }
-function useAsync(asyncCallback) {
+function useAsync() {
   const [state, dispatch] = React.useReducer(pokemonInfoReducer, {
     status: 'pending',
     data: null,
     error: null,
   })
 
-  React.useEffect(() => {
-    // 💰 this first early-exit bit is a little tricky, so let me give you a hint:
-    const promise = asyncCallback()
+  const run = React.useCallback((promise) => {
     if (!promise) {
-      return
-    }
-    // then you can dispatch and handle the promise etc...
-    dispatch({type: 'pending'})
-    promise.then(
-      pokemon => {
-        dispatch({type: 'resolved', data: pokemon})
-      },
-      error => {
-        dispatch({type: 'rejected', error})
-      },
-    )
-  }, [asyncCallback])
+          return
+        }
+        // then you can dispatch and handle the promise etc...
+        dispatch({type: 'pending'})
+        promise.then(
+          pokemon => {
+            dispatch({type: 'resolved', data: pokemon})
+          },
+          error => {
+            dispatch({type: 'rejected', error})
+          },
+        )
+      }, [])
 
-  return state
+  return {...state, run}
 }
 function PokemonInfo({pokemonName}) {
 
-  const asyncCallback = React.useCallback(() => {
+  const {data, status, error, run} = useAsync()
+  
+  React.useEffect(() => {
     if (!pokemonName) {
       return
     }
-    return fetchPokemon(pokemonName)
-  }, [pokemonName])
-
-  const state = useAsync(asyncCallback)
-  
-  const {data, status, error} = state
+    const pokemonPromise = fetchPokemon(pokemonName)
+    run(pokemonPromise)
+  }, [pokemonName, run])
 
   switch (status) {
     case 'idle':
